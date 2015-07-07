@@ -39,8 +39,6 @@ def weekday(day):
     dt = date(int(day[2]),int(day[0]),int(day[1]))
     return weekdays[dt.isoweekday()-1]
 
-print weekday("07/15/2015")
-
 def clean_row(row,i):
     while row[i][0] == " " or row[i][-1] == " ":
         if row[i][0] == " ":
@@ -69,6 +67,7 @@ def get_coordinates(query, from_sensor=False):
     return latitude, longitude
 
 googledistmatrixUrl = 'http://maps.googleapis.com/maps/api/distancematrix/json?'
+incorrect = {"count": 0}
 
 def get_distance(origins, destinations):
     params = {
@@ -86,11 +85,18 @@ def get_distance(origins, destinations):
             destination = response['destination_addresses'][i]
             distance = response["rows"][i]["elements"][0]["distance"]["text"]
             distances[(origin,destination)] = distance
-            print
-            print "FROM: " + origin
-            print "TO: " + destination
-            print distance
-            print
+
+            dst = distance.split(" ")
+            dt = float(dst[0])
+            if dst[1] == "km" and dt > 3.:
+                incorrect["count"] +=1
+                print
+                print "FROM: " + origin
+                print "TO: " + destination
+                # print distance
+                print "wrong distance: "+distance
+                # print
+
             return distance
     else:
         print "ERROR!"
@@ -132,11 +138,18 @@ with open(data_file, 'r') as data_f:
 
         else:
             roadways[roadway] = {"dist": 0, "count": 1}
-            o = row[2]+" and "+row[3]+", New York"
-            d = row[2]+" and "+row[4]+", New York"
+            o = row[2]+" and "+row[3]+", NY"
+            d = row[2]+" and "+row[4]+", NY"
             origins.append(o)
             destinations.append(d)
             dic["distance"] = get_distance([o],[d])
+            dist = dic["distance"].split(" ")
+            dt = float(dist[0])
+            if dist[1] == "km" and dt > 3.:
+                print "should be..."
+                print "FROM: " + o
+                print "TO: " + d
+
 
         # add in day of week
         dic["day"] = weekday(dic["date"])
@@ -155,10 +168,11 @@ with open(data_file, 'r') as data_f:
         data.append(dic)
 
 
+print "INCORRECT #: ",incorrect["count"]
 # o = [origins[0]]
 # d = [destinations[0]]
 
-# get_distance(origins[:25],destinations[:25])
+# get_distance(["grand concourse serv and east 172 street, NY"],["grand concourse_serv and east mt eden avenue, NY"])
 
 # GET COORDINATES OF UNIQUE ROUTES
 # roadways = {}
