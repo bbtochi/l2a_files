@@ -3,48 +3,50 @@
 """
 * LEARN TO USE GIT ON THIS COMPUTER **DONE**
 * CREATE DATA ANALYSIS REPOSITORY ON GIT AND GET SOME FILES **DONE**
-* FIND OUT HOW TO GET ROUTE LENGTHS
+* FIND OUT HOW TO GET ROUTE LENGTHS **DONE**
+* FIND OUT DAYS OF WEEK **DONE**
+* OUTPUT DISTANCES TO CSV FILE
 
 """
 # READ IN DATA
+from googlemaps import convert
+from googlemaps.convert import as_list
 import csv
 import urllib
 import simplejson
 from time import sleep
+from datetime import date
 
 data_file = 'nytraffic.csv'
+output_file = "output.csv"
 data = []
+origins = []
+destinations = []
+roadways = {}
+distances = {}
+weekdays = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+
+def density(length, flowrate):
+    # estimate number of vehicles at any given minute
+    vehicles = flowrate/60
+    dty = vehicles/length
+    print "Density: "+dty
+    return dty
+
+def weekday(day):
+    """ day is mm/dd/yyyy """
+    day = day.split("/")
+    dt = date(int(day[2]),int(day[0]),int(day[1]))
+    return weekdays[dt.isoweekday()-1]
+
+print weekday("07/15/2015")
+
 def clean_row(row,i):
     while row[i][0] == " " or row[i][-1] == " ":
         if row[i][0] == " ":
             row[i] = row[i][1:]
         elif row[i][-1] == " ":
             row[i] = row[i][:-1]
-
-with open(data_file, 'r') as data_f:
-
-    # Parse it as a CSV file.
-    data_csv = csv.reader(data_f, delimiter=',', quotechar='"')
-
-    # Skip the header row.
-    next(data_csv, None)
-
-    # Load the data.
-    for row in data_csv:
-        clean_row(row,2)
-        clean_row(row,3)
-        clean_row(row,4)
-        dic = {'id':row[0], 'segid':row[1], 'roadname':row[2], 'from': row[3], 'to': row[4], 'direction': row[5], 'date': row[6]}
-        i = 24
-        j = 1
-        count = 24
-        while count != 0:
-            key = str(i)+'-'+str(j)
-            dic[key] = row[j+6]
-            i=j
-            j+=1
-            count-=1
-        data.append(dic)
 
 googleGeocodeUrl = 'http://maps.googleapis.com/maps/api/geocode/json?'
 
@@ -66,23 +68,125 @@ def get_coordinates(query, from_sensor=False):
         print query + ": ", "<no results>"
     return latitude, longitude
 
-# count number of unique roadways
-roadways = {}
-count = 0
-for i in range(len(data)):
-    roadway = data[i]["roadname"]
-    if roadway in roadways:
-        roadways[roadway]+=1
+googledistmatrixUrl = 'http://maps.googleapis.com/maps/api/distancematrix/json?'
+
+def get_distance(origins, destinations):
+    params = {
+        "origins": _convert_path(origins),
+        "destinations": _convert_path(destinations)
+    }
+    url = googledistmatrixUrl + urllib.urlencode(params)
+    json_response = urllib.urlopen(url)
+    # print "HEEEEYYYYYY!!!!!!"
+    # print json_response
+    response = simplejson.loads(json_response.read())
+    if response['status'] == "OK":
+        for i in range(len(origins)):
+            origin = response['origin_addresses'][i]
+            destination = response['destination_addresses'][i]
+            distance = response["rows"][i]["elements"][0]["distance"]["text"]
+            distances[(origin,destination)] = distance
+            print
+            print "FROM: " + origin
+            print "TO: " + destination
+            print distance
+            print
+            return distance
     else:
-        count+=1
-        #print count
-        roadways[roadway] = 1
-        get_coordinates(data[i]["roadname"]+" and "+data[i]["from"])
-        sleep(0.5)
-        #print
+        print "ERROR!"
+        print response["status"]
+        return response["status"]
 
-print "THERE ARE "+str(len(roadways))+" UNIQUE ROADWAYS"
+def _convert_path(waypoints):
+    # Handle the single-tuple case
+    if type(waypoints) is tuple:
+        waypoints = [waypoints]
+    else:
+        waypoints = as_list(waypoints)
 
-# get_coordinates("SPRING STREET and BROADWAY")
-# a = [1,2,3]
-# print a[-1]
+    return convert.join_list("|",
+            [(k if convert.is_string(k) else convert.latlng(k))
+                for k in waypoints])
+
+
+with open(data_file, 'r') as data_f:
+    # Parse it as a CSV file.
+    data_csv = csv.reader(data_f, delimiter=',', quotechar='"')
+
+    # Skip the header row.
+    next(data_csv, None)
+
+    # Load the data.
+    c = 0
+    for row in data_csv:
+        clean_row(row,2)
+        clean_row(row,3)
+        clean_row(row,4)
+        dic = {'id':row[0], 'segid':row[1], 'roadname':row[2], 'from': row[3], 'to': row[4], 'direction': row[5], 'date': row[6]}
+
+        # add in distance info
+        roadway = dic["roadname"]
+        if roadway in roadways:
+            roadways[roadway]["count"]+=1
+            dic["distance"] = roadways[roadway]["dist"]
+
+        else:
+            roadways[roadway] = {"dist": 0, "count": 1}
+            o = row[2]+" and "+row[3]+", New York"
+            d = row[2]+" and "+row[4]+", New York"
+            origins.append(o)
+            destinations.append(d)
+            dic["distance"] = get_distance([o],[d])
+
+        # add in day of week
+        dic["day"] = weekday(dic["date"])
+        c+=1
+
+        # add in flow rates
+        i = 24
+        j = 1
+        count = 24
+        while count != 0:
+            key = str(i)+'-'+str(j)
+            dic[key] = row[j+6]
+            i=j
+            j+=1
+            count-=1
+        data.append(dic)
+
+
+# o = [origins[0]]
+# d = [destinations[0]]
+
+# get_distance(origins[:25],destinations[:25])
+
+# GET COORDINATES OF UNIQUE ROUTES
+# roadways = {}
+# count = 0
+# # loop through each row in data
+# for entry in data:
+#     roadway = entry["roadname"]
+#     if roadway in roadways:
+#         roadways[roadway]+=1
+#     else:
+#         count+=1
+#         #print count
+#         roadways[roadway] = 1
+#         get_coordinates(entry["roadname"]+" and "+entry["from"])
+#
+#         sleep(0.5)
+#         #print
+#
+# print "THERE ARE "+str(len(roadways))+" UNIQUE ROADWAYS"
+
+# Write a prediction file.
+with open(output_file, 'w') as outfile:
+
+   # Produce a CSV file.
+   out_csv = csv.writer(outfile, delimiter=',', quotechar='"', lineterminator = '\n')
+
+   # Write the header row.
+   out_csv.writerow(['Id', 'Prediction'])
+   out_csv.writerow(['Id', 'Prediction'])
+   # for i in range(10):
+   #     out_csv.writerow(['w','w'])
