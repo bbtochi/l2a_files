@@ -8,7 +8,6 @@
 """
 # READ IN DATA
 import csv
-import numpy as np
 import urllib
 import simplejson
 from time import sleep
