@@ -135,6 +135,7 @@ with open(data_file, 'r') as data_f:
         if roadway in roadways:
             roadways[roadway]["count"]+=1
             dic["distance"] = roadways[roadway]["dist"]
+            print "ZEROOO: ",dic["distance"]
 
         else:
             roadways[roadway] = {"dist": 0, "count": 1}
