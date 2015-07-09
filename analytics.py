@@ -105,6 +105,10 @@ def _convert_path(waypoints):
             [(k if convert.is_string(k) else convert.latlng(k))
                 for k in waypoints])
 
+# pairings = []
+# entry_count = 0
+# previous = "None"
+# ewos = 0
 
 # READ IN NY FILE
 with open(data_file, 'r') as data_f:
@@ -117,6 +121,7 @@ with open(data_file, 'r') as data_f:
     # Load the data.
     # go through each entry in the data
     for row in data_csv:
+        # entry_count+=1
         clean_row(row,2)
         clean_row(row,3)
         clean_row(row,4)
@@ -128,28 +133,39 @@ with open(data_file, 'r') as data_f:
         # assign origin and destination information
         o = row[2]+" and "+row[3]+", NY"
         d = row[2]+" and "+row[4]+", NY"
+        # p = (o,d)
+        # if p not in pairings:
+        #     pairings.append(p)
 
         #add in distance coordinates info
         roadway = dic["roadname"]
+        # if roadway != previous and previous!= "None":
+        #     roadways[previous]["done"] = True
+
+        previous = roadway
         if roadway in roadways:
+            # if roadways[roadway]["done"]==True:
+            #     print roadway
+            #     ewos+=1
+            #     print "ewo! ",ewos
             roadways[roadway]["count"]+=1
             dic["distance"] = roadways[roadway]["dist"]
             dic["origin"] = roadways[roadway]["origin"]
             dic["destination"] = roadways[roadway]["destination"]
         else:
-            roadways[roadway] = {"dist": 0, "count": 1, "origin": o, "destination": d}
+            roadways[roadway] = {"dist": 0, "count": 1, "origin": o, "destination": d, "done": False}
             roadways[roadway]["dist"] = dic["distance"] = get_distance([o],[d])
             roadways[roadway]["origin"] = dic["origin"] = get_coordinates(o)
             roadways[roadway]["destination"] = dic["destination"] = get_coordinates(d)
 
             # check if distance is too large
-            dist = dic["distance"].split(" ")
-            dt = float(dist[0])
-            if dist[1] == "km" and dt > 3.:
-                dic["large_dist"] = True
-                print "should be..."
-                print "FROM: " + o
-                print "TO: " + d
+            # dist = dic["distance"].split(" ")
+            # dt = float(dist[0])
+            # if dist[1] == "km" and dt > 3.:
+            #     dic["large_dist"] = True
+            #     print "should be..."
+            #     print "FROM: " + o
+            #     print "TO: " + d
 
         # add in flow rates
         i = 24
@@ -163,8 +179,10 @@ with open(data_file, 'r') as data_f:
             j+=1
         data.append(dic)
 
-print "INCORRECT #: ",incorrect["count"]
-
+# print "INCORRECT #: ",incorrect["count"]
+# print "input: ",entry_count
+# print "output: ",len(roadways)
+# print len(pairings)
 #
 # # Write a prediction file.
 # with open(output_file, 'w') as outfile:

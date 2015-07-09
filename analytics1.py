@@ -5,6 +5,7 @@
 * WRITE DATA WITH ESTIMATED SPEED INFORMATION TO OUTPUT FILE
 """
 import csv
+import json
 
 in_file = "right_distances.csv"
 out_file = "speed_estimates"
@@ -26,11 +27,12 @@ def truedist(d):
 def speed_est(length, flowrate):
     fr = float(flowrate)
     vhs_per_min = fr/60.
+    # print "VEHICLES/min: %f"%fr
 
     # time (in hours) it would take one car to cover distance
-    time = (1.0/vhs_per_min)/60.0
-    print "TIME: %fmins"%(time*60.0)
-    return (truedist(length)/time)
+    time = (1.0/vhs_per_min)
+    # print "TIME: %.fmins"%(time*60.0)
+    return time
 
 with open(in_file, 'r') as in_f:
     # parse as csv file
@@ -39,8 +41,9 @@ with open(in_file, 'r') as in_f:
     next(in_csv, None)
 
     # go through each entry and estimate speed
+    entry_count = 0
     for entry in in_csv:
-        dic = {'origin': entry[2], 'destination': entry[3], 'direction': entry[4], 'distance': entry[5], 'date': entry[6], 'day': entry[7] }
+        dic = {'id': entry[1], 'origin': entry[2], 'destination': entry[3], 'direction': entry[4], 'distance': entry[5], 'date': entry[6], 'day': entry[7] }
 
         # add in speed estimates
         i = 24
@@ -49,14 +52,18 @@ with open(in_file, 'r') as in_f:
             key = str(i)+':00-'+str(j)+':00'
             if key not in times:
                 times.append(key)
-            dic[key] = speed_est(dic['distance'], entry[j+7])
-            print "WE HAVE AN ESTIMATE: %f"%dic[key]
-            print "FLOWRATE: "+entry[j+7]+"vhs/hr"
-            print "DISTANCE: "+dic["distance"]
-            print
+            # handle 0 counts for flowrate
+            fr = entry[j+7]
+            if fr == '0':
+                fr = '1'
+            dic[key] = speed_est(dic['distance'],fr)
+            # print "WE HAVE AN ESTIMATE: %f"%dic[key]
+            # print "FLOWRATE: "+entry[j+7]+"vhs/hr"
+            # print "DISTANCE: "+dic["distance"]
+            # print
             i=j
             j+=1
-
+        entry_count+=1
         data.append(dic)
 
 with open(out_file, 'w') as out_f:
@@ -68,10 +75,14 @@ with open(out_file, 'w') as out_f:
 
     for entry in data:
         # get flow rates info for each entry
-        frs = []
+        spds = []
         for time in times:
-            frs.append(entry[time])
+            spds.append(entry[time])
 
         # write row to file
-        row = [entry["large_dist"],entry["id"],entry["origin"],entry["destination"],entry["direction"],entry["distance"],entry["date"],entry["day"]]+frs
+        row = [entry["id"],entry["origin"],entry["destination"],entry["direction"],entry["distance"],entry["date"],entry["day"]]+spds
         out_csv.writerow(row)
+        # json.dump(entry, out_f, indent=8)
+
+print "input: ",entry_count
+print "output: ",len(data)
