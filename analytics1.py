@@ -1,10 +1,11 @@
 """
 * READ IN DATA WITH CORRECT DISTANCES
-* CHANGE DISTANCDS TO MILES
+* CHANGE DISTANCES TO MILES
 * CALCULATE ESTIMATED SPEEDS FOR EACH TIME BLOCK
 * WRITE DATA WITH ESTIMATED SPEED INFORMATION TO OUTPUT FILE
 """
 import csv
+import json
 
 in_file = "right_distances.csv"
 out_file = "speed_estimates"
@@ -19,18 +20,29 @@ def truedist(d):
     if unit == 'm':
         return val*0.000621371
     else:
-        #print "WRONG"
         return val*0.621371
 
-# returns the estimated speed at any given minutet for some roadway
+c = 0
+
+# returns the estimated speed at any given minute for some roadway
 def speed_est(length, flowrate):
+    global c
+
     fr = float(flowrate)
+    # number of vehicle that must cross distance per minute to get desired flowrate
     vhs_per_min = fr/60.
 
     # time (in hours) it would take one car to cover distance
-    time = (1.0/vhs_per_min)/60.0
-    print "TIME: %fmins"%(time*60.0)
-    return (truedist(length)/time)
+    time = (1.0/vhs_per_min)
+    # print "TIME: %.fmins"%(time*60.0)
+    l = length.split(" ")
+    if len(l)>1:
+        if time < 1./6. and length == '1 m':
+            c+=1
+            print "TIME:", time, "min"
+            print "DISTANCE:", length
+
+    return time
 
 with open(in_file, 'r') as in_f:
     # parse as csv file
@@ -40,25 +52,29 @@ with open(in_file, 'r') as in_f:
 
     # go through each entry and estimate speed
     for entry in in_csv:
-        dic = {'origin': entry[2], 'destination': entry[3], 'direction': entry[4], 'distance': entry[5], 'date': entry[6], 'day': entry[7] }
+        dic = {'id': entry[1], 'origin': entry[2], 'destination': entry[3], 'direction': entry[4], 'distance': entry[5], 'date': entry[6], 'day': entry[7] }
 
         # add in speed estimates
-        i = 24
-        j = 1
+        i,j = 24,1
         while j != 25:
             key = str(i)+':00-'+str(j)+':00'
             if key not in times:
                 times.append(key)
-            dic[key] = speed_est(dic['distance'], entry[j+7])
-            print "WE HAVE AN ESTIMATE: %f"%dic[key]
-            print "FLOWRATE: "+entry[j+7]+"vhs/hr"
-            print "DISTANCE: "+dic["distance"]
-            print
+
+            # handle 0 counts for flowrate
+            fr = entry[j+7]
+            if fr == '0':
+                fr = '1'
+
+            # make speed estimate
+            dic[key] = speed_est(dic['distance'],fr)
             i=j
             j+=1
-
         data.append(dic)
 
+print "COUNT:",c
+
+# WRITE DATA WITH SPEED ESTIMATES TO OUTPUT FILE
 with open(out_file, 'w') as out_f:
     # Produce a CSV file.
     out_csv = csv.writer(out_f, delimiter=',', quotechar='"', lineterminator='\n')
@@ -67,11 +83,12 @@ with open(out_file, 'w') as out_f:
     out_csv.writerow(['ID','ORIGIN','DESTINATION','DIR','DISTANCE','DATE','DAY']+times)
 
     for entry in data:
-        # get flow rates info for each entry
-        frs = []
+        # get estimated speed info for each entry
+        spds = []
         for time in times:
-            frs.append(entry[time])
+            spds.append(entry[time])
 
         # write row to file
-        row = [entry["large_dist"],entry["id"],entry["origin"],entry["destination"],entry["direction"],entry["distance"],entry["date"],entry["day"]]+frs
+        row = [entry["id"],entry["origin"],entry["destination"],entry["direction"],entry["distance"],entry["date"],entry["day"]]+spds
         out_csv.writerow(row)
+
