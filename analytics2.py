@@ -36,6 +36,9 @@ in_file = "speed_estimates"
 out_file = "results"
 routes = {}
 week = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+printed = []
+limit = 1000
+absurd = 0
 
 # read in data
 with open(in_file, 'r') as in_f:
@@ -54,6 +57,13 @@ with open(in_file, 'r') as in_f:
         while j != 25:
             time = str(i)+':00-'+str(j)+':00'
             speed = float(entry[j+6])
+            # look for absurd speeds
+            if speed >= limit and route not in printed:
+                absurd+=1
+                print "SPEED: ",speed
+                print "DISTANCE: ",dst
+                print
+                printed.append(route)
 
             #check route has been seen
             if route not in routes:
@@ -73,6 +83,7 @@ with open(in_file, 'r') as in_f:
 
         routes[route][day]["count"]+= 1.0
 
+# CALCULATE AVERAGES PER DAY
 for route in routes:
     for day in routes[route]:
         for time in routes[route][day]:
@@ -80,5 +91,7 @@ for route in routes:
             if time!="count":
                 routes[route][day][time] /= c
 
-with open(out_file, 'w') as out_f:
-        json.dump(routes, out_f, indent=4)
+print "THERE ARE %d ENTRIES WITH SPEEDS OVER %.fmph"%(absurd,limit)
+#
+# with open(out_file, 'w') as out_f:
+#         json.dump(routes, out_f, indent=4)

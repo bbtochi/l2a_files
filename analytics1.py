@@ -7,10 +7,14 @@
 import csv
 import json
 
-in_file = "right_distances.csv"
+in_file = "output.csv"
 out_file = "speed_estimates"
 data = []
 times = []
+routes = []
+c = 0
+large = 0
+
 
 # given metric distance as string, returns distance in miles
 def truedist(d):
@@ -22,27 +26,35 @@ def truedist(d):
     else:
         return val*0.621371
 
-c = 0
-
+prev_length = "none"
 # returns the estimated speed at any given minute for some roadway
 def speed_est(length, flowrate):
-    global c
-
+    global c,prev_length
     fr = float(flowrate)
     # number of vehicle that must cross distance per minute to get desired flowrate
     vhs_per_min = fr/60.
 
     # time (in hours) it would take one car to cover distance
-    time = (1.0/vhs_per_min)
+    time = (1.0/vhs_per_min)/60.0
+    speed = truedist(length)/time
     # print "TIME: %.fmins"%(time*60.0)
-    l = length.split(" ")
-    if len(l)>1:
-        if time < 1./6. and length == '1 m':
-            c+=1
-            print "TIME:", time, "min"
-            print "DISTANCE:", length
-
-    return time
+    # l = length.split(" ")
+    # if len(l)>1:
+    #     if time < 1./6.:
+    #         #print "TIME:", time, "min"
+    #         if float(l[0])>=.04 and l[1] == "km":
+    #             if prev_length == "none":
+    #                 c+=1
+    #                 print "DISTANCE:", length
+    #                 print "TIME:", time, "min"
+    #                 print
+    #             elif length != prev_length:
+    #                 c+=1
+    #                 print "DISTANCE:", length
+    #                 print "TIME:", time, "min"
+    #                 print
+    #             prev_length = length
+    return speed
 
 with open(in_file, 'r') as in_f:
     # parse as csv file
@@ -54,6 +66,22 @@ with open(in_file, 'r') as in_f:
     for entry in in_csv:
         dic = {'id': entry[1], 'origin': entry[2], 'destination': entry[3], 'direction': entry[4], 'distance': entry[5], 'date': entry[6], 'day': entry[7] }
 
+        print "HERE!!"
+
+        # fix distance unit error
+        if len(dic['distance'].split(" ")) == 1:
+            dic["distance"] = dic["distance"][:-1]+" m"
+
+        # look for entries with large distances
+        r = (entry[2],entry[3])
+        if r not in routes:
+            routes.append(r)
+            ds = dic['distance'].split(" ")
+            d = float(ds[0])
+            if d > 3.0 and ds[1] == "km":
+                # print dic["distance"]
+                large+=1
+
         # add in speed estimates
         i,j = 24,1
         while j != 25:
@@ -64,7 +92,7 @@ with open(in_file, 'r') as in_f:
             # handle 0 counts for flowrate
             fr = entry[j+7]
             if fr == '0':
-                fr = '1'
+                fr = '2'
 
             # make speed estimate
             dic[key] = speed_est(dic['distance'],fr)
@@ -92,3 +120,24 @@ with open(out_file, 'w') as out_f:
         row = [entry["id"],entry["origin"],entry["destination"],entry["direction"],entry["distance"],entry["date"],entry["day"]]+spds
         out_csv.writerow(row)
 
+print "THERE ARE STILL %d ENTRIES WITH DISTANCE > 3 KM FROM INPUT DATA"%large
+
+"""
+Still wrong:
+81.2
+16.4
+16.3
+258
+17.3 km
+261 km
+8.9 km
+
+Apparently correct:
+12 km
+3 km
+30.9 km
+4.67 km
+38.8 km
+44.4 km
+19.3 km
+"""
