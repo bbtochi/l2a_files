@@ -66,8 +66,6 @@ with open(in_file, 'r') as in_f:
     for entry in in_csv:
         dic = {'id': entry[1], 'origin': entry[2], 'destination': entry[3], 'direction': entry[4], 'distance': entry[5], 'date': entry[6], 'day': entry[7] }
 
-        print "HERE!!"
-
         # fix distance unit error
         if len(dic['distance'].split(" ")) == 1:
             dic["distance"] = dic["distance"][:-1]+" m"
