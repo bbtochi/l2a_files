@@ -130,7 +130,7 @@ with open(data_file, 'r') as data_f:
         # assign origin and destination information
         o = row[2]+" and "+row[3]+", NY"
         d = row[2]+" and "+row[4]+", NY"
-        route = dic["roadname"]
+        route = (o,d)
         # if p not in pairings:
         #     pairings.append(p)
 
