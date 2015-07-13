@@ -37,7 +37,7 @@ out_file = "results"
 routes = {}
 week = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
 printed = []
-limit = 1000
+limit = 90
 absurd = 0
 
 # read in data
@@ -56,7 +56,12 @@ with open(in_file, 'r') as in_f:
         i,j = 24,1
         while j != 25:
             time = str(i)+':00-'+str(j)+':00'
-            speed = float(entry[j+6])
+            spd_dty = entry[j+6].split(',')
+            spd_dty = [spd_dty[0][1:],spd_dty[1][:-1]]
+            print spd_dty
+
+            speed = float(spd_dty[0])
+            density = float(spd_dty[1])
             # look for absurd speeds
             if speed >= limit and route not in printed:
                 absurd+=1
@@ -68,16 +73,21 @@ with open(in_file, 'r') as in_f:
             #check route has been seen
             if route not in routes:
                 routes[route] = {day: {}}
-                routes[route][day][time] = speed
+                routes[route][day][time] = {}
+                routes[route][day][time]["speed"] = speed
+                routes[route][day][time]["density"] = density
                 routes[route][day]["count"] = 1.0
             # check if day has been seen for route
             elif day not in routes[route]:
-                routes[route][day] = {"count": 1.0, time: speed}
+                routes[route][day] = {"count": 1.0, time: {"speed": speed, "density": density}}
             # check if time has been seen on this day of week for this route
             elif time not in routes[route][day]:
-                routes[route][day][time] = speed
+                routes[route][day][time] = {}
+                routes[route][day][time]["speed"] = speed
+                routes[route][day][time]["density"] = density
             else:
-                routes[route][day][time]+= speed
+                routes[route][day][time]["speed"]+= speed
+                routes[route][day][time]["density"]+= density
             i=j
             j+=1
 
@@ -89,9 +99,17 @@ for route in routes:
         for time in routes[route][day]:
             c = routes[route][day]["count"]
             if time!="count":
-                routes[route][day][time] /= c
+                routes[route][day][time]["speed"] /= c
+                routes[route][day][time]["density"] /= c
+                speed = routes[route][day][time]["speed"]
+                # look for absurd speeds
+                if speed >= limit:
+                    absurd+=1
+                    print "SPEED: ",speed
+                    print "DISTANCE: ",dst
+                    print
 
 print "THERE ARE %d ENTRIES WITH SPEEDS OVER %.fmph"%(absurd,limit)
-#
-# with open(out_file, 'w') as out_f:
-#         json.dump(routes, out_f, indent=4)
+
+with open(out_file, 'w') as out_f:
+        json.dump(routes, out_f, indent=4)
