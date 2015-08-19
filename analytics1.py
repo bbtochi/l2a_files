@@ -44,9 +44,9 @@ def speed_est(length, flowrate):
     # correct crazy speeds,considering distance to be covered
     if speed > limit:
         if distance < 3.0:
-            speed = 55
+            speed = 55.0
         else:
-            speed = 65
+            speed = 65.0
 
     # detect distances that give crazy speeds
     # print "TIME: %.fmins"%(time*60.0)
@@ -71,7 +71,7 @@ def speed_est(length, flowrate):
 # READ IN DATA WITH CORRECT DISTANCES
 with open(in_file, 'r') as in_f:
     # parse as csv file
-    in_csv = csv.reader(in_f, delimiter=',', quotechar='"')
+    in_csv = csv.reader(in_f, delimiter=';', quotechar='"')
 
     next(in_csv, None)
 
@@ -117,7 +117,7 @@ print "COUNT:",c
 # WRITE DATA WITH SPEED ESTIMATES TO OUTPUT FILE
 with open(out_file, 'w') as out_f:
     # Produce a CSV file.
-    out_csv = csv.writer(out_f, delimiter=',', quotechar='"', lineterminator='\n')
+    out_csv = csv.writer(out_f, delimiter=';', quotechar='"', lineterminator='\n')
 
     # Write the header row.
     out_csv.writerow(['ID','ORIGIN','DESTINATION','DIR','DISTANCE','DATE','DAY']+times)
@@ -133,23 +133,3 @@ with open(out_file, 'w') as out_f:
         out_csv.writerow(row)
 
 print "THERE ARE STILL %d ENTRIES WITH DISTANCE > 3 KM OR < 4 M FROM INPUT DATA"%large
-
-"""
-Still wrong:
-81.2
-16.4
-16.3
-258
-17.3 km
-261 km
-8.9 km
-
-Apparently correct:
-12 km
-3 km
-30.9 km
-4.67 km
-38.8 km
-44.4 km
-19.3 km
-"""

@@ -52,10 +52,12 @@ def get_coordinates(query, from_sensor=False):
     if response['results']:
         location = response['results'][0]['geometry']['location']
         latitude, longitude = location['lat'], location['lng']
+        address = response['results'][0]['formatted_address']
     else:
         latitude, longitude = None, None
         print query + ": ", "<no results>"
-    return latitude, longitude
+    # return latitude, longitude
+    return address
 
 # returns the distance between two locations
 def get_distance(origins, destinations):
@@ -106,7 +108,7 @@ def _convert_path(waypoints):
 # ewos = 0
 
 # READ IN NY FILE
-with open(data_file, 'r') as data_f:
+with open(data_file, 'rU') as data_f:
     # Parse it as a CSV file.
     data_csv = csv.reader(data_f, delimiter=',', quotechar='"')
 
@@ -166,8 +168,8 @@ with open(data_file, 'r') as data_f:
             if (dist[1] == "km" and dt > 3.) or (dist[1] == "m" and dt < 4.):
                 dic["wrong_dist"] = True
                 print "should be..."
-                print "FROM: " + o
-                print "TO: " + d
+                print "FROM: " + dic['origin']
+                print "TO: " + dic['destination']
 
         # add in flow rates
         i = 24
